@@ -1,0 +1,31 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net5.0</TargetFramework>
+    <EnableDefaultItems>false</EnableDefaultItems>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="Ft232HDevice.cs" />
+    <Compile Include="Ft232HGpio.cs" />
+    <Compile Include="Ft232HI2c.cs" />
+    <Compile Include="Ft232HI2cBus.cs" />
+    <Compile Include="Ft232HSpi.cs" />
+    <Compile Include="FtCommon.cs" />
+    <Compile Include="FtDevice.cs" />
+    <Compile Include="FtDeviceType.cs" />
+    <Compile Include="FtFlag.cs" />
+    <Compile Include="FtFlowControl.cs" />
+    <Compile Include="FtFunction.cs" />
+    <Compile Include="FtOpcode.cs" />
+    <Compile Include="FtOpenType.cs" />
+    <Compile Include="FtStatus.cs" />
+    <Compile Include="FtVersion.cs" />
+    <Compile Include="SafeFtHandle.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Device.Gpio" Version="1.5.0" />
+  </ItemGroup>
+
+</Project>
