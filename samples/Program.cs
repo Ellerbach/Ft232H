@@ -4,8 +4,11 @@ using Iot.Device.Common;
 using Iot.Device.Ft232H;
 using Iot.Device.FtCommon;
 using System;
+using System.Collections.Generic;
+using System.Device.Spi;
 using System.Threading;
 using UnitsNet;
+using System.Device.Gpio;
 
 namespace samples
 {
@@ -16,7 +19,7 @@ namespace samples
             Console.WriteLine("Hello FT232H");
             var devices = FtCommon.GetDevices();
             Console.WriteLine($"{devices.Count} available device(s)");
-            foreach(var device in devices)
+            foreach (var device in devices)
             {
                 Console.WriteLine($"  {device.Description}");
                 Console.WriteLine($"    Flags: {device.Flags}");
@@ -26,12 +29,32 @@ namespace samples
                 Console.WriteLine($"    Type: {device.Type}");
             }
 
-             if(devices.Count == 0)
+            if (devices.Count == 0)
             {
                 Console.WriteLine("No device connected");
                 return;
             }
 
+            TestSpi(devices);
+        }
+
+        static void TestSpi(List<FtDevice> devices)
+        {
+            SpiConnectionSettings settings = new(0, 3) { ClockFrequency = 1_000_000, DataBitLength = 8, ChipSelectLineActiveState = PinValue.Low };
+            var spi = new Ft232HSpi(settings, new Ft232HDevice(devices[0]));
+            Span<byte> toSend = stackalloc byte[10] { 0x12, 0x42, 0xFF, 0x00, 0x23, 0x98, 0x87, 0x65, 0x21, 0x34 };
+            Span<byte> toRead = stackalloc byte[10];
+            spi.TransferFullDuplex(toSend, toRead);
+            for (int i = 0; i < toRead.Length; i++)
+            {
+                Console.Write($"{toRead[i]:X2} ");
+            }
+
+            Console.WriteLine();
+        }
+
+        static void TestI2c(List<FtDevice> devices)
+        {
             // set this to the current sea level pressure in the area for correct altitude readings
             Pressure defaultSeaLevelPressure = WeatherHelper.MeanSeaLevel;
             Length stationHeight = Length.FromMeters(640); // Elevation of the sensor
