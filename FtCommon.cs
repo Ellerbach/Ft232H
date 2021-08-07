@@ -31,7 +31,7 @@ namespace Iot.Device.FtCommon
             Debug.WriteLine($"Number of devices: {numOfDevices}");
             if (numOfDevices == 0)
             {
-                throw new IOException($"No device found");
+                return devInfos;
             }
 
             Span<byte> sernum = stackalloc byte[16];

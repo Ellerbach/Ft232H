@@ -21,7 +21,7 @@ namespace Iot.Device.Ft232H
 
         protected override int PinCount => Ft232HDevice.PinCountConst;
 
-        internal Ft232HGpio(Ft232HDevice deviceInformation)
+        public Ft232HGpio(Ft232HDevice deviceInformation)
         {
             DeviceInformation = deviceInformation;
             // Open device

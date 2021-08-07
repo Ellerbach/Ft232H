@@ -469,7 +469,7 @@ namespace Iot.Device.Ft232H
                     }
 
                     break;
-                
+
                 case SpiMode.Mode2:
                 case SpiMode.Mode1:
                     if (settings.DataFlow == DataFlow.MsbFirst)
@@ -506,7 +506,7 @@ namespace Iot.Device.Ft232H
             switch (settings.Mode)
             {
                 default:
-                case SpiMode.Mode3:                
+                case SpiMode.Mode3:
                 case SpiMode.Mode0:
                     if (settings.DataFlow == DataFlow.MsbFirst)
                     {
@@ -577,7 +577,7 @@ namespace Iot.Device.Ft232H
                         clock = (byte)FtOpcode.ClockDataBytesOutOnPlusBytesInOnMinusVeClockLSBFirst;
                     }
 
-                    break;                               
+                    break;
             }
 
             SpiChipSelectEnable((byte)settings.ChipSelectLine, true);
@@ -609,6 +609,7 @@ namespace Iot.Device.Ft232H
             int idx = 0;
             if (chipSelect < 8)
             {
+                GPIO_Low_Dir |= (byte)(1 << chipSelect);
                 if (value == PinValue.High)
                 {
                     GPIO_Low_Dat |= (byte)(1 << chipSelect);
@@ -629,6 +630,7 @@ namespace Iot.Device.Ft232H
             }
             else
             {
+                GPIO_High_Dir |= (byte)(1 << (chipSelect - 8));
                 if (value == PinValue.High)
                 {
                     GPIO_High_Dat |= (byte)(1 << (chipSelect - 8));
