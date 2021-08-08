@@ -1,5 +1,4 @@
-﻿
-// Licensed to the .NET Foundation under one or more agreements.
+﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
@@ -7,6 +6,9 @@ using System.Device.I2c;
 
 namespace Iot.Device.Ft232H
 {
+    /// <summary>
+    /// I2C Device for FT232H
+    /// </summary>
     public class Ft232HI2c : I2cDevice
     {
         private Ft232HI2cBus _i2cBus;

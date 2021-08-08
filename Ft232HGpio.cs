@@ -1,17 +1,16 @@
-﻿
-using Iot.Device.FtCommon;
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using System;
-using System.Collections.Generic;
 using System.Device.Gpio;
-using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace Iot.Device.Ft232H
 {
+    /// <summary>
+    /// GPIO driver for the FT232H
+    /// </summary>
     public class Ft232HGpio : GpioDriver
     {
         /// <summary>
@@ -19,8 +18,13 @@ namespace Iot.Device.Ft232H
         /// </summary>
         public Ft232HDevice DeviceInformation { get; private set; }
 
+        /// <inheritdoc/>
         protected override int PinCount => Ft232HDevice.PinCountConst;
 
+        /// <summary>
+        /// Creates a GPIO Driver
+        /// </summary>
+        /// <param name="deviceInformation">The FT232H device</param>
         public Ft232HGpio(Ft232HDevice deviceInformation)
         {
             DeviceInformation = deviceInformation;
@@ -28,8 +32,10 @@ namespace Iot.Device.Ft232H
             DeviceInformation.GetHandle();
         }
 
+        /// <inheritdoc/>
         protected override int ConvertPinNumberToLogicalNumberingScheme(int pinNumber) => pinNumber;
 
+        /// <inheritdoc/>
         protected override void OpenPin(int pinNumber)
         {
             if ((pinNumber < 0) || (pinNumber >= PinCount))
@@ -57,11 +63,13 @@ namespace Iot.Device.Ft232H
             DeviceInformation._PinOpen[pinNumber] = true;
         }
 
+        /// <inheritdoc/>
         protected override void ClosePin(int pinNumber)
         {
             DeviceInformation._PinOpen[pinNumber] = false;
         }
 
+        /// <inheritdoc/>
         protected override void SetPinMode(int pinNumber, PinMode mode)
         {
             if (pinNumber < 8)
@@ -71,11 +79,11 @@ namespace Iot.Device.Ft232H
                 {
                     byte mask = 0xFF;
                     mask &= (byte)(~(1 << pinNumber));
-                    DeviceInformation.GPIO_Low_Dir &= mask;
+                    DeviceInformation._gpioLowDir &= mask;
                 }
                 else
                 {
-                    DeviceInformation.GPIO_Low_Dir |= (byte)(1 << pinNumber);
+                    DeviceInformation._gpioLowDir |= (byte)(1 << pinNumber);
                 }
 
                 DeviceInformation.SetGpioValuesLow();
@@ -86,27 +94,29 @@ namespace Iot.Device.Ft232H
                 {
                     byte mask = 0xFF;
                     mask &= (byte)(~(1 << (pinNumber - 8)));
-                    DeviceInformation.GPIO_High_Dir &= mask;
+                    DeviceInformation._gpioHighDir &= mask;
                 }
                 else
                 {
-                    DeviceInformation.GPIO_High_Dir |= (byte)(1 << (pinNumber - 8));
+                    DeviceInformation._gpioHighDir |= (byte)(1 << (pinNumber - 8));
                 }
 
                 DeviceInformation.SetGpioValuesHigh();
             }
         }
 
+        /// <inheritdoc/>
         protected override PinMode GetPinMode(int pinNumber)
         {
             if (pinNumber < 8)
             {
-                return ((DeviceInformation.GPIO_Low_Dir >> pinNumber) & 0x01) == 0x01 ? PinMode.Output : PinMode.Input;
+                return ((DeviceInformation._gpioLowDir >> pinNumber) & 0x01) == 0x01 ? PinMode.Output : PinMode.Input;
             }
 
-            return ((DeviceInformation.GPIO_High_Dir >> (pinNumber - 8)) & 0x01) == 0x01 ? PinMode.Output : PinMode.Input;
+            return ((DeviceInformation._gpioHighDir >> (pinNumber - 8)) & 0x01) == 0x01 ? PinMode.Output : PinMode.Input;
         }
 
+        /// <inheritdoc/>
         protected override bool IsPinModeSupported(int pinNumber, PinMode mode)
         {
             if ((mode == PinMode.InputPullDown) || (mode == PinMode.InputPullUp))
@@ -117,6 +127,7 @@ namespace Iot.Device.Ft232H
             return true;
         }
 
+        /// <inheritdoc/>
         protected override PinValue Read(int pinNumber)
         {
             if (pinNumber < 8)
@@ -131,19 +142,20 @@ namespace Iot.Device.Ft232H
             }
         }
 
+        /// <inheritdoc/>
         protected override void Write(int pinNumber, PinValue value)
         {
             if (pinNumber < 8)
             {
                 if (value == PinValue.High)
                 {
-                    DeviceInformation.GPIO_Low_Dat |= (byte)(1 << pinNumber);
+                    DeviceInformation._gpioLowData |= (byte)(1 << pinNumber);
                 }
                 else
                 {
                     byte mask = 0xFF;
                     mask &= (byte)(~(1 << pinNumber));
-                    DeviceInformation.GPIO_Low_Dat &= mask;
+                    DeviceInformation._gpioLowData &= mask;
                 }
 
                 DeviceInformation.SetGpioValuesLow();
@@ -152,29 +164,32 @@ namespace Iot.Device.Ft232H
             {
                 if (value == PinValue.High)
                 {
-                    DeviceInformation.GPIO_High_Dat |= (byte)(1 << (pinNumber - 8));
+                    DeviceInformation._gpioHighData |= (byte)(1 << (pinNumber - 8));
                 }
                 else
                 {
                     byte mask = 0xFF;
                     mask &= (byte)(~(1 << (pinNumber - 8)));
-                    DeviceInformation.GPIO_High_Dat &= mask;
+                    DeviceInformation._gpioHighData &= mask;
                 }
 
                 DeviceInformation.SetGpioValuesHigh();
             }
         }
 
+        /// <inheritdoc/>
         protected override WaitForEventResult WaitForEvent(int pinNumber, PinEventTypes eventTypes, CancellationToken cancellationToken)
         {
             throw new NotImplementedException();
         }
 
+        /// <inheritdoc/>
         protected override void AddCallbackForPinValueChangedEvent(int pinNumber, PinEventTypes eventTypes, PinChangeEventHandler callback)
         {
             throw new NotImplementedException();
         }
 
+        /// <inheritdoc/>
         protected override void RemoveCallbackForPinValueChangedEvent(int pinNumber, PinChangeEventHandler callback)
         {
             throw new NotImplementedException();

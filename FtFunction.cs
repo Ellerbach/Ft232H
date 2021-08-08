@@ -52,30 +52,96 @@ namespace Iot.Device.FtCommon
         [DllImport("ftd2xx")]
         public static extern FtStatus FT_Close(IntPtr ftHandle);
 
+        /// <summary>
+        /// Sets timeouts
+        /// </summary>
+        /// <param name="ftHandle">The handle of the open device</param>
+        /// <param name="dwReadTimeout">Read timeout in milliseconds</param>
+        /// <param name="dwWriteTimeout">Write timeout in milliseconds</param>
+        /// <returns></returns>
         [DllImport("ftd2xx")]
         public static extern FtStatus FT_SetTimeouts(SafeFtHandle ftHandle, uint dwReadTimeout, uint dwWriteTimeout);
 
+        /// <summary>
+        /// Sets latency timer
+        /// </summary>
+        /// <param name="ftHandle">The handle of the open device</param>
+        /// <param name="ucLatency">The latency in milliseconds</param>
+        /// <returns></returns>
         [DllImport("ftd2xx")]
         public static extern FtStatus FT_SetLatencyTimer(SafeFtHandle ftHandle, byte ucLatency);
 
+        /// <summary>
+        /// Sets flow control
+        /// </summary>
+        /// <param name="ftHandle">The handle of the open device</param>
+        /// <param name="usFlowControl">The type of flow control</param>
+        /// <param name="uXon">Byte used for Xon</param>
+        /// <param name="uXoff">Byte used for Xoff</param>
+        /// <returns></returns>
         [DllImport("ftd2xx")]
         public static extern FtStatus FT_SetFlowControl(SafeFtHandle ftHandle, ushort usFlowControl, byte uXon, byte uXoff);
         
+        /// <summary>
+        /// Set bit more
+        /// </summary>
+        /// <param name="ftHandle">The handle of the open device</param>
+        /// <param name="ucMask">bit mode mask</param>
+        /// <param name="ucMode">bit mode</param>
+        /// <returns></returns>
         [DllImport("ftd2xx")]
         public static extern FtStatus FT_SetBitMode(SafeFtHandle ftHandle, byte ucMask, byte ucMode);
         
+        /// <summary>
+        /// Get queued status
+        /// </summary>
+        /// <param name="ftHandle">The handle of the open device</param>
+        /// <param name="lpdwAmountInRxQueue">number of available bytes in queue</param>
+        /// <returns></returns>
         [DllImport("ftd2xx")]
         public static extern FtStatus FT_GetQueueStatus(SafeFtHandle ftHandle, ref uint lpdwAmountInRxQueue);
         
+        /// <summary>
+        /// Read
+        /// </summary>
+        /// <param name="ftHandle">The handle of the open device</param>
+        /// <param name="lpBuffer">The buffer to place the bytes in</param>
+        /// <param name="dwBytesToRead">The number of bytes to read</param>
+        /// <param name="lpdwBytesReturned">The number of byte read</param>
+        /// <returns></returns>
         [DllImport("ftd2xx")]
         public static extern FtStatus FT_Read(SafeFtHandle ftHandle, in byte lpBuffer, uint dwBytesToRead, ref uint lpdwBytesReturned);
 
+        /// <summary>
+        /// Write
+        /// </summary>
+        /// <param name="ftHandle">The handle of the open device</param>
+        /// <param name="lpBuffer">The buffer containing the bytes to send</param>
+        /// <param name="dwBytesToWrite">The number of bytes to write</param>
+        /// <param name="lpdwBytesWritten">The number of bytes written</param>
+        /// <returns></returns>
         [DllImport("ftd2xx")]
         public static extern FtStatus FT_Write(SafeFtHandle ftHandle, in byte lpBuffer, uint dwBytesToWrite, ref uint lpdwBytesWritten);
 
+        /// <summary>
+        /// Sets chars for interruption
+        /// </summary>
+        /// <param name="ftHandle">The handle of the open device</param>
+        /// <param name="uEventCh">0 to ignore the event, 1 use it</param>
+        /// <param name="uEventChEn">The char to use</param>
+        /// <param name="uErrorCh">0 to ignore the error event, 1 use it</param>
+        /// <param name="uErrorChEn">The char to use for error</param>
+        /// <returns></returns>
         [DllImport("ftd2xx")]
         public static extern FtStatus FT_SetChars(SafeFtHandle ftHandle, byte uEventCh, byte uEventChEn, byte uErrorCh, byte uErrorChEn);
 
+        /// <summary>
+        /// Sets the USB transfer parameters
+        /// </summary>
+        /// <param name="ftHandle">The handle of the open device</param>
+        /// <param name="dwInTransferSize">Transfer size of the buffer to read</param>
+        /// <param name="dwOutTransferSize">Transfer size of the buffer to write</param>
+        /// <returns></returns>
         [DllImport("ftd2xx")]
         public static extern FtStatus FT_SetUSBParameters(SafeFtHandle ftHandle, uint dwInTransferSize, uint dwOutTransferSize);
     }

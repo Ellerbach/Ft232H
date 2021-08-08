@@ -20,7 +20,6 @@
     <Compile Include="FtOpcode.cs" />
     <Compile Include="FtOpenType.cs" />
     <Compile Include="FtStatus.cs" />
-    <Compile Include="FtVersion.cs" />
     <Compile Include="SafeFtHandle.cs" />
   </ItemGroup>
 

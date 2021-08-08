@@ -35,13 +35,15 @@ namespace samples
                 return;
             }
 
+            // Un comment the test you want to run
             TestSpi(devices);
+            TestI2c(devices);
         }
 
         static void TestSpi(List<FtDevice> devices)
         {
             SpiConnectionSettings settings = new(0, 3) { ClockFrequency = 1_000_000, DataBitLength = 8, ChipSelectLineActiveState = PinValue.Low };
-            var spi = new Ft232HSpi(settings, new Ft232HDevice(devices[0]));
+            var spi = new Ft232HDevice(devices[0]).CreateSpiDevice(settings);
             Span<byte> toSend = stackalloc byte[10] { 0x12, 0x42, 0xFF, 0x00, 0x23, 0x98, 0x87, 0x65, 0x21, 0x34 };
             Span<byte> toRead = stackalloc byte[10];
             spi.TransferFullDuplex(toSend, toRead);

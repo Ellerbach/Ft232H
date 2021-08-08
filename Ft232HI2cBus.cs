@@ -1,22 +1,15 @@
-﻿using Iot.Device.FtCommon;
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using System;
 using System.Collections.Generic;
 using System.Device.I2c;
 using System.IO;
-using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Iot.Device.Ft232H
 {
     /// <summary>
-    /// Ft232HI2cBus
-    /// Commands are available in: 
-    /// - AN_108_Command_Processor_for_MPSSE_and_MCU_Host_Bus_Emulation_Modes.pdf
-    /// - AN_113_FTDI_Hi_Speed_USB_To_I2C_Example.pdf
-    /// To understand the signal need: https://training.ti.com/sites/default/files/docs/slides-i2c-protocol.pdf
+    /// I2C Bus for FT232H
     /// </summary>
     internal class Ft232HI2cBus : I2cBus
     {
@@ -27,12 +20,17 @@ namespace Iot.Device.Ft232H
         /// </summary>
         public Ft232HDevice DeviceInformation { get; private set; }
 
+        /// <summary>
+        /// Creates anI2C Bus
+        /// </summary>
+        /// <param name="deviceInformation"></param>
         public Ft232HI2cBus(Ft232HDevice deviceInformation)
         {
             DeviceInformation = deviceInformation;
             DeviceInformation.I2cInitialize();
         }
 
+        /// <inheritdoc/>
         public override I2cDevice CreateDevice(int deviceAddress)
         {
             if (!_usedAddresses.Add(deviceAddress))
@@ -43,6 +41,7 @@ namespace Iot.Device.Ft232H
             return new Ft232HI2c(this, deviceAddress);
         }
 
+        /// <inheritdoc/>
         public override void RemoveDevice(int deviceAddress)
         {
             if (!_usedAddresses.Remove(deviceAddress))
@@ -51,6 +50,7 @@ namespace Iot.Device.Ft232H
             }
         }
 
+        /// <inheritdoc/>
         internal void Read(int deviceAddress, Span<byte> buffer)
         {
             DeviceInformation.I2cStart();
@@ -74,6 +74,7 @@ namespace Iot.Device.Ft232H
             DeviceInformation.I2cStop();
         }
 
+        /// <inheritdoc/>
         internal void Write(int deviceAddress, ReadOnlySpan<byte> buffer)
         {
             DeviceInformation.I2cStart();

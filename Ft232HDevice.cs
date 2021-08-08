@@ -1,18 +1,21 @@
-﻿using Iot.Device.FtCommon;
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+using Iot.Device.FtCommon;
 using System;
 using System.Collections.Generic;
 using System.Device.Gpio;
 using System.Device.I2c;
 using System.Device.Spi;
 using System.IO;
-using System.Linq;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace Iot.Device.Ft232H
 {
+    /// <summary>
+    /// FT232H Device
+    /// </summary>
     public class Ft232HDevice : FtDevice, IDisposable
     {
         /// <summary>
@@ -20,27 +23,28 @@ namespace Iot.Device.Ft232H
         /// </summary>
         internal const int PinCountConst = 16;
 
+        // Commands are available in: 
+        // - AN_108_Command_Processor_for_MPSSE_and_MCU_Host_Bus_Emulation_Modes.pdf
+        // - AN_113_FTDI_Hi_Speed_USB_To_I2C_Example.pdf
+        // To understand the signal need for I2C communication: https://training.ti.com/sites/default/files/docs/slides-i2c-protocol.pdf
         private const uint I2cMasterFrequencyKbps = 400;
-        private const byte I2C_Dir_SDAout_SCLout = 0x03;
-        private const byte I2C_Data_SDAlo_SCLhi = 0x01;
-        private const byte I2C_Data_SDAhi_SCLhi = 0x03;
-        private const byte I2C_Data_SDAlo_SCLlo = 0x00;
-        private const byte I2C_Data_SDAhi_SCLlo = 0x02;
+        private const byte I2cDirSDAoutSCLout = 0x03;
+        private const byte I2cDataSDAloSCLhi = 0x01;
+        private const byte I2cDataSDAhiSCLhi = 0x03;
+        private const byte I2cDataSDAloSCLlo = 0x00;
+        private const byte I2cDataSDAhiSCLlo = 0x02;
         private const byte NumberCycles = 5;
 
         private SafeFtHandle _ftHandle;
 
         // This is used by FT232H and others to track the GPIO states
-        internal byte GPIO_Low_Dat = 0;
-        internal byte GPIO_Low_Dir = 0;
-        internal byte GPIO_High_Dat = 0;
-        internal byte GPIO_High_Dir = 0;
+        internal byte _gpioLowData = 0;
+        internal byte _gpioLowDir = 0;
+        internal byte _gpioHighData = 0;
+        internal byte _gpioHighDir = 0;
 
         internal bool[] _PinOpen = new bool[PinCountConst];
         internal PinMode[] _gpioDirections = new PinMode[PinCountConst];
-        internal PinEventTypes[] _gpioTriggers = new PinEventTypes[PinCountConst];
-        internal PinChangeEventHandler?[] _pinRisingHandlers = new PinChangeEventHandler[PinCountConst];
-        internal PinChangeEventHandler?[] _pinFallingHandlers = new PinChangeEventHandler[PinCountConst];
 
         internal List<SpiConnectionSettings> _connectionSettings = new List<SpiConnectionSettings>();
 
@@ -65,9 +69,107 @@ namespace Iot.Device.Ft232H
         /// Creates I2C bus related to this device
         /// </summary>
         /// <returns>I2cBus instance</returns>
-        public I2cBus CreateI2cBus()
+        /// <remarks>You can create either an I2C, either an SPI device.</remarks>
+        public I2cBus CreateI2cBus() => new Ft232HI2cBus(this);
+
+        /// <summary>
+        /// Creates SPI device related to this device
+        /// </summary>
+        /// <param name="settings">The SPI settings</param>
+        /// <returns>a SPI device</returns>
+        /// <remarks>You can create either an I2C, either an SPI device.
+        /// You can create multiple SPI devices, the first one will be the one used for the clock frequency.
+        /// They all have to have different Chip Select. You can use any of the 3 to 15 pin for this function.</remarks>
+        public SpiDevice CreateSpiDevice(SpiConnectionSettings settings) => new Ft232HSpi(settings, this);
+
+        /// <summary>
+        /// Gets the pin number from a string
+        /// </summary>
+        /// <param name="pin">A string</param>
+        /// <returns>The pin number</returns>
+        /// <remarks>Valid pins are ADBUS0 to 7, D0 to 7, ACBUS0 to 7, C0 to 7,
+        /// TCK, SK, CLK, MOSI, MISO, SDA, TDI, DI, TDO, DO,
+        /// TMS, CS, GPIOL0 to 3, GPIOH0 to 7</remarks>
+        public int GetPinNumberFromString(string pin)
         {
-            return new Ft232HI2cBus(this);
+            pin = pin.ToUpper();
+            switch (pin)
+            {
+                case "ADBUS0":
+                case "D0":
+                case "TCK":
+                case "SK":
+                case "CLK":
+                    return 0;
+                case "ADBUS1":
+                case "D1":
+                case "DO":
+                case "TDI":
+                case "SDA":
+                case "MOSI":
+                    return 1;
+                case "ADBUS2":
+                case "D2":
+                case "DI":
+                case "TDO":
+                case "MISO":
+                    return 2;
+                case "ADBUS3":
+                case "D3":
+                case "TMS":
+                case "CS":
+                    return 3;
+                case "ADBUS4":
+                case "D4":
+                case "GPIOL0":
+                    return 4;
+                case "ADBUS5":
+                case "D5":
+                case "GPIOL1":
+                    return 5;
+                case "ADBUS6":
+                case "D6":
+                case "GPIOL2":
+                    return 6;
+                case "ADBUS7":
+                case "D7":
+                case "GPIOL3":
+                    return 7;
+                case "ACBUS0":
+                case "C0":
+                case "GPIOH0":
+                    return 8;
+                case "ACBUS1":
+                case "C1":
+                case "GPIOH1":
+                    return 9;
+                case "ACBUS2":
+                case "C2":
+                case "GPIOH2":
+                    return 10;
+                case "ACBUS3":
+                case "C3":
+                case "GPIOH3":
+                    return 11;
+                case "ACBUS4":
+                case "C4":
+                case "GPIOH4":
+                    return 12;
+                case "ACBUS5":
+                case "C5":
+                case "GPIOH5":
+                    return 13;
+                case "ACBUS6":
+                case "C6":
+                case "GPIOH6":
+                    return 14;
+                case "ACBUS7":
+                case "C7":
+                case "GPIOH7":
+                    return 15;
+                default:
+                    return -1;
+            }
         }
 
         internal bool IsI2cMode { get; set; }
@@ -78,7 +180,7 @@ namespace Iot.Device.Ft232H
         {
             if ((_ftHandle == null) || _ftHandle.IsClosed)
             {
-                // Open device
+                // Open device if not opened
                 var ftStatus = FtFunction.FT_OpenEx(LocId, FtOpenType.OpenByLocation, out _ftHandle);
 
                 if (ftStatus != FtStatus.Ok)
@@ -146,10 +248,10 @@ namespace Iot.Device.Ft232H
             //Command to set directions of lower 8 pins and force value on bits set as output
             toSend[idx++] = (byte)FtOpcode.SetDataBitsLowByte;
             // SDA and SCL both output high (open drain)
-            GPIO_Low_Dat = (byte)(I2C_Data_SDAhi_SCLhi | (GPIO_Low_Dat & 0xF8));
-            GPIO_Low_Dir = (byte)(I2C_Dir_SDAout_SCLout | (GPIO_Low_Dir & 0xF8));
-            toSend[idx++] = GPIO_Low_Dat;
-            toSend[idx++] = GPIO_Low_Dir;
+            _gpioLowData = (byte)(I2cDataSDAhiSCLhi | (_gpioLowData & 0xF8));
+            _gpioLowDir = (byte)(I2cDirSDAoutSCLout | (_gpioLowDir & 0xF8));
+            toSend[idx++] = _gpioLowData;
+            toSend[idx++] = _gpioLowDir;
             Write(toSend);
         }
 
@@ -182,39 +284,39 @@ namespace Iot.Device.Ft232H
             int count;
             int idx = 0;
             // SDA high, SCL high
-            GPIO_Low_Dat = (byte)(I2C_Data_SDAhi_SCLhi | (GPIO_Low_Dat & 0xF8));
-            GPIO_Low_Dir = (byte)(I2C_Dir_SDAout_SCLout | (GPIO_Low_Dir & 0xF8));
+            _gpioLowData = (byte)(I2cDataSDAhiSCLhi | (_gpioLowData & 0xF8));
+            _gpioLowDir = (byte)(I2cDirSDAoutSCLout | (_gpioLowDir & 0xF8));
             Span<byte> toSend = stackalloc byte[NumberCycles * 3 * 3 + 3];
             for (count = 0; count < NumberCycles; count++)
             {
                 toSend[idx++] = (byte)FtOpcode.SetDataBitsLowByte;
-                toSend[idx++] = GPIO_Low_Dat;
-                toSend[idx++] = GPIO_Low_Dir;
+                toSend[idx++] = _gpioLowData;
+                toSend[idx++] = _gpioLowDir;
             }
 
             // SDA lo, SCL high
-            GPIO_Low_Dat = (byte)(0x00 | I2C_Data_SDAlo_SCLhi | (GPIO_Low_Dat & 0xF8));
+            _gpioLowData = (byte)(0x00 | I2cDataSDAloSCLhi | (_gpioLowData & 0xF8));
             for (count = 0; count < NumberCycles; count++)
             {
                 toSend[idx++] = (byte)FtOpcode.SetDataBitsLowByte;
-                toSend[idx++] = GPIO_Low_Dat;
-                toSend[idx++] = GPIO_Low_Dir;
+                toSend[idx++] = _gpioLowData;
+                toSend[idx++] = _gpioLowDir;
             }
 
             // SDA lo, SCL lo
-            GPIO_Low_Dat = (byte)(0x00 | I2C_Data_SDAlo_SCLlo | (GPIO_Low_Dat & 0xF8));
+            _gpioLowData = (byte)(0x00 | I2cDataSDAloSCLlo | (_gpioLowData & 0xF8));
             for (count = 0; count < NumberCycles; count++)
             {
                 toSend[idx++] = (byte)FtOpcode.SetDataBitsLowByte;
-                toSend[idx++] = GPIO_Low_Dat;
-                toSend[idx++] = GPIO_Low_Dir;
+                toSend[idx++] = _gpioLowData;
+                toSend[idx++] = _gpioLowDir;
             }
 
             // Release SDA
-            GPIO_Low_Dat = (byte)(0x00 | I2C_Data_SDAhi_SCLlo | (GPIO_Low_Dat & 0xF8));
+            _gpioLowData = (byte)(0x00 | I2cDataSDAhiSCLlo | (_gpioLowData & 0xF8));
             toSend[idx++] = (byte)FtOpcode.SetDataBitsLowByte;
-            toSend[idx++] = GPIO_Low_Dat;
-            toSend[idx++] = GPIO_Low_Dir;
+            toSend[idx++] = _gpioLowData;
+            toSend[idx++] = _gpioLowDir;
 
             Write(toSend);
         }
@@ -224,33 +326,33 @@ namespace Iot.Device.Ft232H
             int count;
             int idx = 0;
             // SDA low, SCL low
-            GPIO_Low_Dat = (byte)(I2C_Data_SDAlo_SCLlo | (GPIO_Low_Dat & 0xF8));
-            GPIO_Low_Dir = (byte)(I2C_Dir_SDAout_SCLout | (GPIO_Low_Dir & 0xF8));
+            _gpioLowData = (byte)(I2cDataSDAloSCLlo | (_gpioLowData & 0xF8));
+            _gpioLowDir = (byte)(I2cDirSDAoutSCLout | (_gpioLowDir & 0xF8));
             Span<byte> toSend = stackalloc byte[NumberCycles * 3 * 3];
             for (count = 0; count < NumberCycles; count++)
             {
                 toSend[idx++] = (byte)FtOpcode.SetDataBitsLowByte;
-                toSend[idx++] = GPIO_Low_Dat;
-                toSend[idx++] = GPIO_Low_Dir;
+                toSend[idx++] = _gpioLowData;
+                toSend[idx++] = _gpioLowDir;
             }
             // SDA low, SCL high
-            GPIO_Low_Dat = (byte)(I2C_Data_SDAlo_SCLhi | (GPIO_Low_Dat & 0xF8));
-            GPIO_Low_Dir = (byte)(I2C_Dir_SDAout_SCLout | (GPIO_Low_Dir & 0xF8));
+            _gpioLowData = (byte)(I2cDataSDAloSCLhi | (_gpioLowData & 0xF8));
+            _gpioLowDir = (byte)(I2cDirSDAoutSCLout | (_gpioLowDir & 0xF8));
             for (count = 0; count < NumberCycles; count++)
             {
                 toSend[idx++] = (byte)FtOpcode.SetDataBitsLowByte;
-                toSend[idx++] = GPIO_Low_Dat;
-                toSend[idx++] = GPIO_Low_Dir;
+                toSend[idx++] = _gpioLowData;
+                toSend[idx++] = _gpioLowDir;
             }
 
             // SDA high, SCL high
-            GPIO_Low_Dat = (byte)(I2C_Data_SDAhi_SCLhi | (GPIO_Low_Dat & 0xF8));
-            GPIO_Low_Dir = (byte)(I2C_Dir_SDAout_SCLout | (GPIO_Low_Dir & 0xF8));
+            _gpioLowData = (byte)(I2cDataSDAhiSCLhi | (_gpioLowData & 0xF8));
+            _gpioLowDir = (byte)(I2cDirSDAoutSCLout | (_gpioLowDir & 0xF8));
             for (count = 0; count < NumberCycles; count++)
             {
                 toSend[idx++] = (byte)FtOpcode.SetDataBitsLowByte;
-                toSend[idx++] = GPIO_Low_Dat;
-                toSend[idx++] = GPIO_Low_Dir;
+                toSend[idx++] = _gpioLowData;
+                toSend[idx++] = _gpioLowDir;
             }
 
             Write(toSend);
@@ -260,12 +362,12 @@ namespace Iot.Device.Ft232H
         {
             int idx = 0;
             // SDA low, SCL low
-            GPIO_Low_Dat = (byte)(I2C_Data_SDAhi_SCLhi | (GPIO_Low_Dat & 0xF8));
-            GPIO_Low_Dir = (byte)(I2C_Dir_SDAout_SCLout | (GPIO_Low_Dir & 0xF8));
+            _gpioLowData = (byte)(I2cDataSDAhiSCLhi | (_gpioLowData & 0xF8));
+            _gpioLowDir = (byte)(I2cDirSDAoutSCLout | (_gpioLowDir & 0xF8));
             Span<byte> toSend = stackalloc byte[3];
             toSend[idx++] = (byte)FtOpcode.SetDataBitsLowByte;
-            toSend[idx++] = GPIO_Low_Dat;
-            toSend[idx++] = GPIO_Low_Dir;
+            toSend[idx++] = _gpioLowData;
+            toSend[idx++] = _gpioLowDir;
             Write(toSend);
             IsI2cMode = false;
         }
@@ -281,11 +383,11 @@ namespace Iot.Device.Ft232H
             toSend[idx++] = 0;
             toSend[idx++] = data;
             // Put line back to idle (data released, clock pulled low)
-            GPIO_Low_Dat = (byte)(I2C_Data_SDAhi_SCLlo | (GPIO_Low_Dat & 0xF8));
-            GPIO_Low_Dir = (byte)(I2C_Dir_SDAout_SCLout | (GPIO_Low_Dir & 0xF8));
+            _gpioLowData = (byte)(I2cDataSDAhiSCLlo | (_gpioLowData & 0xF8));
+            _gpioLowDir = (byte)(I2cDirSDAoutSCLout | (_gpioLowDir & 0xF8));
             toSend[idx++] = (byte)FtOpcode.SetDataBitsLowByte;
-            toSend[idx++] = GPIO_Low_Dat;
-            toSend[idx++] = GPIO_Low_Dir;
+            toSend[idx++] = _gpioLowData;
+            toSend[idx++] = _gpioLowDir;
             // Clock in (0 = 1 byte)
             toSend[idx++] = (byte)FtOpcode.ClockDataBitsInOnPlusVeClockMSBFirst;
             toSend[idx++] = 0;
@@ -324,10 +426,10 @@ namespace Iot.Device.Ft232H
             toSend[idx++] = (byte)(ack ? 0x00 : 0xFF);
             // I2C lines back to idle state 
             toSend[idx++] = (byte)FtOpcode.SetDataBitsLowByte;
-            GPIO_Low_Dir = (byte)(I2C_Dir_SDAout_SCLout | (GPIO_Low_Dir & 0xF8));
-            GPIO_Low_Dat = (byte)(I2C_Data_SDAhi_SCLlo | (GPIO_Low_Dat & 0xF8));
-            toSend[idx++] = GPIO_Low_Dir;
-            toSend[idx++] = GPIO_Low_Dat;
+            _gpioLowDir = (byte)(I2cDirSDAoutSCLout | (_gpioLowDir & 0xF8));
+            _gpioLowData = (byte)(I2cDataSDAhiSCLlo | (_gpioLowData & 0xF8));
+            toSend[idx++] = _gpioLowDir;
+            toSend[idx++] = _gpioLowData;
             // And ask it right away
             toSend[idx++] = (byte)FtOpcode.SendImmediate;
             Write(toSend);
@@ -354,8 +456,8 @@ namespace Iot.Device.Ft232H
         {
             Span<byte> toSend = stackalloc byte[2];
             toSend[0] = (byte)FtOpcode.SetDataBitsLowByte;
-            toSend[1] = GPIO_Low_Dat;
-            toSend[2] = GPIO_Low_Dir;
+            toSend[1] = _gpioLowData;
+            toSend[2] = _gpioLowDir;
             Write(toSend);
         }
         internal byte GetGpioValuesHigh()
@@ -373,8 +475,8 @@ namespace Iot.Device.Ft232H
         {
             Span<byte> toSend = stackalloc byte[2];
             toSend[0] = (byte)FtOpcode.SetDataBitsHighByte;
-            toSend[1] = GPIO_High_Dat;
-            toSend[2] = GPIO_High_Dir;
+            toSend[1] = _gpioHighData;
+            toSend[2] = _gpioHighDir;
             Write(toSend);
         }
 
@@ -419,11 +521,11 @@ namespace Iot.Device.Ft232H
             toSend[idx++] = (byte)FtOpcode.Disable3PhaseDataClocking;
             toSend[idx++] = (byte)FtOpcode.SetDataBitsLowByte;
             // Pin clock output, MISO output, MOSI input
-            GPIO_Low_Dir = (byte)((GPIO_Low_Dir & 0xF8) | 0x03);
+            _gpioLowDir = (byte)((_gpioLowDir & 0xF8) | 0x03);
             // clock, MOSI and MISO to 0
-            GPIO_Low_Dat = (byte)(GPIO_Low_Dat & 0xF8);
-            toSend[idx++] = GPIO_Low_Dir;
-            toSend[idx++] = GPIO_Low_Dat;
+            _gpioLowData = (byte)(_gpioLowData & 0xF8);
+            toSend[idx++] = _gpioLowDir;
+            toSend[idx++] = _gpioLowData;
             // The SK clock frequency can be worked out by below algorithm with divide by 5 set as off
             // TCK period = 60MHz / (( 1 + [ (0xValueH * 256) OR 0xValueL] ) * 2)
             //Command to set clock divisor
@@ -609,44 +711,44 @@ namespace Iot.Device.Ft232H
             int idx = 0;
             if (chipSelect < 8)
             {
-                GPIO_Low_Dir |= (byte)(1 << chipSelect);
+                _gpioLowDir |= (byte)(1 << chipSelect);
                 if (value == PinValue.High)
                 {
-                    GPIO_Low_Dat |= (byte)(1 << chipSelect);
+                    _gpioLowData |= (byte)(1 << chipSelect);
                 }
                 else
                 {
                     byte mask = 0xFF;
                     mask &= (byte)(~(1 << chipSelect));
-                    GPIO_Low_Dat &= mask;
+                    _gpioLowData &= mask;
                 }
 
                 for (int i = 0; i < NumberCycles; i++)
                 {
                     toSend[idx++] = (byte)FtOpcode.SetDataBitsLowByte;
-                    toSend[idx++] = GPIO_Low_Dat;
-                    toSend[idx++] = GPIO_Low_Dir;
+                    toSend[idx++] = _gpioLowData;
+                    toSend[idx++] = _gpioLowDir;
                 }
             }
             else
             {
-                GPIO_High_Dir |= (byte)(1 << (chipSelect - 8));
+                _gpioHighDir |= (byte)(1 << (chipSelect - 8));
                 if (value == PinValue.High)
                 {
-                    GPIO_High_Dat |= (byte)(1 << (chipSelect - 8));
+                    _gpioHighData |= (byte)(1 << (chipSelect - 8));
                 }
                 else
                 {
                     byte mask = 0xFF;
                     mask &= (byte)(~(1 << (chipSelect - 8)));
-                    GPIO_High_Dat &= mask;
+                    _gpioHighData &= mask;
                 }
 
                 for (int i = 0; i < NumberCycles; i++)
                 {
                     toSend[idx++] = (byte)FtOpcode.SetDataBitsHighByte;
-                    toSend[idx++] = GPIO_High_Dat;
-                    toSend[idx++] = GPIO_High_Dir;
+                    toSend[idx++] = _gpioHighData;
+                    toSend[idx++] = _gpioHighDir;
                 }
             }
 
@@ -724,6 +826,7 @@ namespace Iot.Device.Ft232H
         public void Dispose()
         {
             _ftHandle.Dispose();
+            _ftHandle = null;
         }
     }
 }
