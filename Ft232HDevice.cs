@@ -454,7 +454,7 @@ namespace Iot.Device.Ft232H
 
         internal void SetGpioValuesLow()
         {
-            Span<byte> toSend = stackalloc byte[2];
+            Span<byte> toSend = stackalloc byte[3];
             toSend[0] = (byte)FtOpcode.SetDataBitsLowByte;
             toSend[1] = _gpioLowData;
             toSend[2] = _gpioLowDir;
@@ -473,7 +473,7 @@ namespace Iot.Device.Ft232H
 
         internal void SetGpioValuesHigh()
         {
-            Span<byte> toSend = stackalloc byte[2];
+            Span<byte> toSend = stackalloc byte[3];
             toSend[0] = (byte)FtOpcode.SetDataBitsHighByte;
             toSend[1] = _gpioHighData;
             toSend[2] = _gpioHighDir;
